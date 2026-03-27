@@ -75,7 +75,11 @@ familiar/
 
 ## Environment Variables
 
-Set these in Vercel via `vercel env add`:
+Set these in Vercel using `printf` (not `echo`, which adds a trailing newline):
+
+```bash
+printf 'your-value' | vercel env add VAR_NAME production
+```
 
 | Variable | Description |
 |----------|-------------|
@@ -104,4 +108,4 @@ vercel --prod          # Production deployment
 
 ## Status
 
-Early stage — FastAPI backend deployed on Vercel, design mocks complete.
+Early stage — Bland AI voice call integration working end-to-end (trigger + webhook), deployed on Vercel.
