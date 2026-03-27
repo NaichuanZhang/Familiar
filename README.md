@@ -45,6 +45,48 @@ Familiar turns ad-hoc check-ins into a reliable care rhythm. Family members coll
 
 _This list will grow as the project evolves._
 
+## Architecture
+
+The backend runs as FastAPI serverless functions on Vercel's Python runtime. All API routes are defined in `api/index.py` and routed via Vercel rewrites. Python 3.12 is pinned via `.python-version`.
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/hello` | GET | Hello greeting |
+| `/api/health` | GET | Health check |
+
+## Project Structure
+
+```
+familiar/
+  api/
+    index.py            # FastAPI app — all API routes
+  mock/
+    index.html          # Dashboard design mock
+  vercel.json           # Vercel routing config
+  requirements.txt      # Python dependencies
+  .python-version       # Python 3.12
+```
+
+## Development
+
+```bash
+pip install -r requirements.txt
+uvicorn api.index:app --reload
+```
+
+The API will be available at `http://localhost:8000`.
+
+## Deployment
+
+Deployed on Vercel: https://familiar-fawn.vercel.app
+
+```bash
+vercel deploy          # Preview deployment
+vercel --prod          # Production deployment
+```
+
 ## Status
 
-Early stage — tech stack selected, design mocks complete, beginning implementation.
+Early stage — FastAPI backend deployed on Vercel, design mocks complete.
