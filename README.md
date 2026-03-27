@@ -30,7 +30,7 @@ Familiar turns ad-hoc check-ins into a reliable care rhythm. Family members coll
 ## Tech Stack
 
 ### Frontend
-- **Next.js** — React framework for the dashboard UI
+- **Static HTML mock** — Dashboard design prototype (`mock/index.html`)
 - Deployed on **Vercel**
 
 ### Backend
@@ -38,12 +38,13 @@ Familiar turns ad-hoc check-ins into a reliable care rhythm. Family members coll
 - **uv** — Python package and project manager
 
 ### Services & APIs
+- **Bland AI** — Voice agent platform; the app triggers Bland AI to make the actual calls to patients
+
+### Planned
 - **Auth0** — Authentication and user management
 - **Ghost** (ghost.build) — Managed PostgreSQL database
-- **Bland AI** — Voice agent platform; the app triggers Bland AI to make the actual calls to patients
+- **Next.js** — React dashboard UI (replacing static mock)
 - **Macrospace** — Automated code review
-
-_This list will grow as the project evolves._
 
 ## Architecture
 
@@ -59,6 +60,36 @@ Voice calls are triggered via the Bland AI API. The app sends a call request to 
 | `/api/health` | GET | Health check |
 | `/api/calls/trigger` | POST | Trigger a Bland AI voice call |
 | `/api/calls/webhook` | POST | Receive post-call transcript from Bland AI |
+
+### POST `/api/calls/trigger`
+
+Triggers an outbound voice call via Bland AI. All fields are optional — defaults are pulled from environment variables.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `phone_number` | string? | `DEFAULT_PHONE_NUMBER` env var | Patient phone number |
+| `task` | string? | — | Free-form task/prompt for the call |
+| `pathway_id` | string? | — | Bland AI pathway ID |
+| `persona_id` | string? | `BLAND_AGENT_ID` env var | Bland AI persona ID |
+| `voice` | string | `"mason"` | Voice for the call |
+| `max_duration` | int | `10` | Max call duration in minutes |
+| `record` | bool | `true` | Whether to record the call |
+| `metadata` | dict? | — | Arbitrary metadata passed through |
+
+At least one of `task`, `pathway_id`, `persona_id`, or `BLAND_AGENT_ID` env var must be set.
+
+### POST `/api/calls/webhook`
+
+Receives the post-call payload from Bland AI. Fields processed:
+
+| Field | Description |
+|-------|-------------|
+| `call_id` | Bland AI call identifier |
+| `concatenated_transcript` | Full call transcript |
+| `recording_url` | URL to the call recording |
+| `call_length` | Duration of the call |
+| `status` | Call completion status |
+| `metadata` | Metadata passed through from the trigger |
 
 ## Project Structure
 
@@ -108,4 +139,4 @@ vercel --prod          # Production deployment
 
 ## Status
 
-Early stage — Bland AI voice call integration working end-to-end (trigger + webhook), deployed on Vercel.
+Early stage — Bland AI voice call integration working end-to-end with flexible call trigger (custom task, persona, or pathway) and post-call webhook. Deployed on Vercel.
