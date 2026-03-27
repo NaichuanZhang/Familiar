@@ -33,8 +33,8 @@ AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "your-tenant.us.auth0.com")
 AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID", "your-client-id")
 AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET", "your-client-secret")
 AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE", "https://api.grandmacare.local")
-AUTH0_CALLBACK_URL = "http://localhost:8000/auth/callback"
-AUTH0_LOGOUT_URL = "http://localhost:8000"
+AUTH0_CALLBACK_URL = os.getenv("AUTH0_CALLBACK_URL", "http://localhost:8000/auth/callback")
+AUTH0_LOGOUT_URL = os.getenv("AUTH0_LOGOUT_URL", "http://localhost:8000")
 
 app = FastAPI(title="GrandmaCare — Auth0 Demo")
 router = APIRouter()
