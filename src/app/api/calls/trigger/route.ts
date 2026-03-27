@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { apiSuccess, apiError } from "@/lib/api/response";
 import { validateBody } from "@/lib/api/validate";
 import { patientProfilesRepository } from "@/repositories/patient-profiles";
+import { triggerBlandCall } from "@/lib/bland-ai/trigger-call";
 
 const triggerCallSchema = z.object({
   phoneNumber: z.string().optional(),
@@ -17,11 +18,6 @@ const triggerCallSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.BLAND_API_KEY;
-  if (!apiKey) {
-    return apiError("BLAND_API_KEY not configured", 500);
-  }
-
   const validation = await validateBody(request, triggerCallSchema);
   if (!validation.success) return validation.response;
 
@@ -39,52 +35,24 @@ export async function POST(request: NextRequest) {
     return apiError("No phone number provided", 400);
   }
 
-  const defaultAgentId = process.env.BLAND_AGENT_ID;
-  const hasExplicitAgent = !!(req.task || req.pathwayId || req.personaId);
-
-  if (!hasExplicitAgent && !defaultAgentId) {
-    return apiError(
-      "Provide task, pathwayId, or personaId (no default agent configured)",
-      400,
-    );
-  }
-
-  const payload: Record<string, unknown> = {
-    phone_number: phone,
-    voice: req.voice,
-    max_duration: req.maxDuration,
-    record: req.record,
-  };
-
-  if (req.task) payload.task = req.task;
-  if (req.pathwayId) payload.pathway_id = req.pathwayId;
-  if (req.personaId) payload.persona_id = req.personaId;
-  if (!hasExplicitAgent && defaultAgentId) payload.persona_id = defaultAgentId;
-  if (req.metadata) payload.metadata = req.metadata;
-  if (webhookUrl) payload.webhook = webhookUrl;
-
   try {
-    const response = await fetch("https://api.bland.ai/v1/calls", {
-      method: "POST",
-      headers: {
-        Authorization: apiKey,
-        "Content-Type": "application/json",
-        "User-Agent": "Familiar/0.1.0",
-      },
-      body: JSON.stringify(payload),
+    const result = await triggerBlandCall({
+      phoneNumber: phone,
+      task: req.task,
+      pathwayId: req.pathwayId,
+      personaId: req.personaId,
+      voice: req.voice,
+      maxDuration: req.maxDuration,
+      record: req.record,
+      metadata: req.metadata,
+      webhookUrl,
     });
-
-    if (!response.ok) {
-      const body = await response.text();
-      return apiError(`Bland AI error: ${body}`, response.status);
-    }
-
-    const result = await response.json();
-    return apiSuccess({
-      callId: result.call_id,
-      status: result.status ?? "queued",
-    });
+    return apiSuccess(result);
   } catch (e) {
-    return apiError(`Failed to reach Bland AI: ${e}`, 502);
+    const message = e instanceof Error ? e.message : String(e);
+    if (message.includes("not configured") || message.includes("Provide task")) {
+      return apiError(message, 400);
+    }
+    return apiError(`Failed to trigger call: ${message}`, 502);
   }
 }

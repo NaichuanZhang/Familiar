@@ -58,6 +58,8 @@ API routes in `src/app/api/` provide a RESTful interface with consistent JSON en
 
 Voice calls are triggered via the Bland AI API. When a user clicks "Call Now", the app looks up the patient's phone number from the database and sends a call request to Bland AI. After the call completes, Bland AI sends the transcript back to the webhook endpoint, which writes it to the `call_logs` table.
 
+Calls are also triggered automatically by a Vercel Cron Job that runs every 5 minutes. The scheduler checks all active call schedules against the current time in each patient's timezone, deduplicates against existing call logs for the day, and triggers calls via the shared Bland AI service.
+
 ## Database Schema
 
 PostgreSQL (Ghost.build). A user (family member) can manage multiple patients. Patients only interact via voice calls.
@@ -217,6 +219,7 @@ CREATE INDEX idx_action_items_assigned ON action_items(assigned_user_id, status)
 | `/api/action-items` | GET, POST | List / create action items |
 | `/api/action-items/[id]` | GET, PATCH, DELETE | Get / update / delete action item |
 | `/api/action-items/[id]/toggle` | PATCH | Toggle action item completion |
+| `/api/cron/trigger-calls` | GET | Vercel Cron: auto-trigger scheduled calls |
 
 ### POST `/api/calls/trigger`
 
@@ -251,6 +254,8 @@ familiar/
         calls/
           trigger/route.ts    # Bland AI call trigger
           webhook/route.ts    # Bland AI post-call webhook
+        cron/
+          trigger-calls/route.ts  # Vercel Cron auto-scheduler
         users/                # CRUD
         patients/             # CRUD + /family, /activity
         schedules/            # CRUD
@@ -258,7 +263,7 @@ familiar/
     components/
       ui/                     # Avatar, Badge, Button, Modal, Tabs
       layout/                 # Sidebar, RightPanel, AppShell
-      dashboard/              # GreetingBanner, CallCard, ActivityFeed, NewCallModal
+      dashboard/              # GreetingBanner, CallCard, ActivityFeed, NewCallModal, EditCallModal
       settings/               # PatientProfileForm
     db/
       index.ts                # Drizzle client
@@ -266,6 +271,8 @@ familiar/
     repositories/             # Data access layer (one per entity)
     lib/
       api/                    # Response envelope, validation helpers
+      bland-ai/               # Shared Bland AI call trigger service
+      scheduler/              # Cron scheduling logic (shouldTriggerSchedule)
       validations/            # Zod schemas per entity
       utils.ts                # cn(), getInitials(), formatTime()
   mock/
@@ -289,6 +296,7 @@ familiar/
 | `BLAND_AGENT_ID` | Default Bland AI persona ID (Elderly Care Companion) |
 | `DEFAULT_PHONE_NUMBER` | Fallback patient phone number for calls |
 | `BASE_URL` | Deployed app URL for webhook callbacks |
+| `CRON_SECRET` | Secret for Vercel Cron Job authentication |
 
 ## Development
 
@@ -327,4 +335,4 @@ vercel --prod          # Production deployment
 
 ## Status
 
-Full-stack Next.js app with Ghost PostgreSQL database. Dashboard with call scheduling, action item tracking, and Bland AI voice call integration working end-to-end. Settings page for patient profile management. 37 tests passing.
+Full-stack Next.js app with Ghost PostgreSQL database. Dashboard with call scheduling (edit/delete), action item tracking, and Bland AI voice call integration working end-to-end. Automatic call scheduling via Vercel Cron (every 5 minutes). Settings page for patient profile management. 32+ tests passing.

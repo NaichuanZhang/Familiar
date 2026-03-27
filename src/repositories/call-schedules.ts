@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
-import { callSchedules, users } from "@/db/schema";
+import { callSchedules, users, patientProfiles } from "@/db/schema";
 import type {
   CreateCallScheduleInput,
   UpdateCallScheduleInput,
@@ -8,10 +8,7 @@ import type {
 
 export const callSchedulesRepository = {
   findAll: async () => {
-    return db
-      .select()
-      .from(callSchedules)
-      .orderBy(callSchedules.scheduledTime);
+    return db.select().from(callSchedules).orderBy(callSchedules.scheduledTime);
   },
 
   findById: async (id: string) => {
@@ -45,17 +42,38 @@ export const callSchedulesRepository = {
       .where(
         and(
           eq(callSchedules.patientId, patientId),
-          eq(callSchedules.isActive, true)
-        )
+          eq(callSchedules.isActive, true),
+        ),
       )
       .orderBy(callSchedules.scheduledTime);
   },
 
-  create: async (data: CreateCallScheduleInput & { createdByUserId?: string }) => {
-    const [schedule] = await db
-      .insert(callSchedules)
-      .values(data)
-      .returning();
+  findAllActive: async () => {
+    return db
+      .select({
+        schedule: callSchedules,
+        patientPhone: patientProfiles.phoneNumber,
+        patientTimezone: patientProfiles.timezone,
+        patientStatus: patientProfiles.status,
+      })
+      .from(callSchedules)
+      .innerJoin(
+        patientProfiles,
+        eq(patientProfiles.id, callSchedules.patientId),
+      )
+      .where(
+        and(
+          eq(callSchedules.isActive, true),
+          eq(patientProfiles.status, "active"),
+        ),
+      )
+      .orderBy(callSchedules.scheduledTime);
+  },
+
+  create: async (
+    data: CreateCallScheduleInput & { createdByUserId?: string },
+  ) => {
+    const [schedule] = await db.insert(callSchedules).values(data).returning();
     return schedule;
   },
 

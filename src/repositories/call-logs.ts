@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { callLogs } from "@/db/schema";
 
@@ -19,10 +19,7 @@ type CreateCallLogInput = {
 
 export const callLogsRepository = {
   findById: async (id: string) => {
-    const [log] = await db
-      .select()
-      .from(callLogs)
-      .where(eq(callLogs.id, id));
+    const [log] = await db.select().from(callLogs).where(eq(callLogs.id, id));
     return log ?? null;
   },
 
@@ -51,6 +48,22 @@ export const callLogsRepository = {
       .limit(limit);
   },
 
+  findByScheduleIdAndDate: async (scheduleId: string, dateStr: string) => {
+    const startOfDay = new Date(`${dateStr}T00:00:00Z`);
+    const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);
+    const [log] = await db
+      .select()
+      .from(callLogs)
+      .where(
+        and(
+          eq(callLogs.scheduleId, scheduleId),
+          gte(callLogs.createdAt, startOfDay),
+          lte(callLogs.createdAt, endOfDay),
+        ),
+      );
+    return log ?? null;
+  },
+
   create: async (data: CreateCallLogInput) => {
     const [log] = await db.insert(callLogs).values(data).returning();
     return log;
@@ -59,7 +72,7 @@ export const callLogsRepository = {
   updateStatus: async (
     id: string,
     status: string,
-    extra?: Partial<CreateCallLogInput>
+    extra?: Partial<CreateCallLogInput>,
   ) => {
     const [log] = await db
       .update(callLogs)

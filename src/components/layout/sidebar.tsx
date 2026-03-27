@@ -1,15 +1,8 @@
 "use client";
 
-import {
-  LayoutGrid,
-  Calendar,
-  CheckCircle,
-  Users,
-  Settings,
-} from "lucide-react";
+import { LayoutGrid, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 type FamilyMember = {
@@ -28,9 +21,6 @@ type SidebarProps = {
 
 const navItems = [
   { label: "Dashboard", icon: LayoutGrid, href: "/" },
-  { label: "Call Schedule", icon: Calendar, href: "/" },
-  { label: "Action Items", icon: CheckCircle, href: "/" },
-  { label: "Family Circle", icon: Users, href: "/" },
   { label: "Settings", icon: Settings, href: "/settings" },
 ];
 
@@ -93,15 +83,6 @@ export function Sidebar({
             );
           })}
         </ul>
-
-        <div className="text-[10.5px] font-bold uppercase tracking-wider text-text-muted mb-3.5">
-          Family Circle
-        </div>
-        <div className="flex gap-2.5 mb-8 flex-wrap">
-          {family.map((m) => (
-            <Avatar key={m.name} name={m.name} color={m.displayColor} />
-          ))}
-        </div>
 
         <div className="mt-auto pt-5 border-t border-border-light">
           <div className="flex justify-between items-center py-1.5 text-[12.5px] text-text-secondary">

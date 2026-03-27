@@ -17,6 +17,7 @@ type CallCardProps = {
   lastCompleted?: string;
   animationDelay?: number;
   onCallNow?: () => void;
+  onEdit?: () => void;
   calling?: boolean;
 };
 
@@ -31,6 +32,7 @@ export function CallCard({
   assigneeColor,
   animationDelay = 0,
   onCallNow,
+  onEdit,
   calling = false,
 }: CallCardProps) {
   const isMedicine = callType === "medicine";
@@ -97,7 +99,9 @@ export function CallCard({
             {calling ? "Calling..." : "Call Now"}
           </Button>
         )}
-        <Button variant="card-muted">Edit</Button>
+        <Button variant="card-muted" onClick={onEdit}>
+          Edit
+        </Button>
       </div>
     </div>
   );

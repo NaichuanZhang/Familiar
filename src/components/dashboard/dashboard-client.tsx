@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { GreetingBanner } from "./greeting-banner";
 import { CallCard } from "./call-card";
 import { ActivityFeed } from "./activity-feed";
 import { NewCallModal } from "./new-call-modal";
+import { EditCallModal } from "./edit-call-modal";
 import { Tabs } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -18,6 +20,7 @@ type Schedule = {
     purpose: string | null;
     cadence: string;
     scheduledTime: string;
+    assignedUserId: string | null;
     isActive: boolean;
   };
   assigneeName: string | null;
@@ -91,8 +94,12 @@ export function DashboardClient({
   activity,
   users,
 }: DashboardProps) {
+  const router = useRouter();
   const [tab, setTab] = useState<TabFilter>("today");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<
+    Schedule["schedule"] | null
+  >(null);
   const [actionItems, setActionItems] = useState(initialActionItems);
   const [callingScheduleId, setCallingScheduleId] = useState<string | null>(
     null,
@@ -188,6 +195,7 @@ export function DashboardClient({
             assigneeColor={getAssigneeColor(family, s.assigneeName)}
             animationDelay={i * 80}
             onCallNow={() => handleCallNow(s.schedule.id)}
+            onEdit={() => setEditingSchedule(s.schedule)}
             calling={callingScheduleId === s.schedule.id}
           />
         ))}
@@ -202,10 +210,26 @@ export function DashboardClient({
 
       <NewCallModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          router.refresh();
+        }}
         patientId={patient.id}
         users={users}
       />
+
+      {editingSchedule && (
+        <EditCallModal
+          open={true}
+          onClose={() => setEditingSchedule(null)}
+          onSaved={() => {
+            setEditingSchedule(null);
+            router.refresh();
+          }}
+          schedule={editingSchedule}
+          users={users}
+        />
+      )}
     </AppShell>
   );
 }
