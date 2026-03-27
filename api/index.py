@@ -21,6 +21,7 @@ app.add_middleware(
 )
 
 BLAND_API_URL = "https://api.bland.ai/v1/calls"
+SENSO_API_URL = "https://apiv2.senso.ai/api/v1"
 
 
 # ── Models ──────────────────────────────────────────────
@@ -35,6 +36,11 @@ class CallRequest(BaseModel):
     max_duration: int = 10
     record: bool = True
     metadata: dict | None = None
+
+
+class KnowledgeSearchRequest(BaseModel):
+    query: str
+    max_results: int = 3
 
 
 # ── Endpoints ───────────────────────────────────────────
@@ -149,3 +155,42 @@ async def call_webhook(request: Request):
         logger.info("Metadata | id=%s: %s", call_id, json.dumps(metadata))
 
     return {"received": True}
+
+
+@app.post("/api/knowledge/search")
+def search_knowledge(req: KnowledgeSearchRequest):
+    api_key = os.environ.get("SENSO_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="SENSO_KEY not configured")
+
+    payload = {
+        "query": req.query,
+        "max_results": req.max_results,
+    }
+
+    data = json.dumps(payload).encode()
+    headers = {
+        "X-API-Key": api_key,
+        "Content-Type": "application/json",
+        "User-Agent": "Familiar/0.1.0",
+    }
+
+    request = urllib.request.Request(
+        f"{SENSO_API_URL}/org/search", data=data, headers=headers, method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(request) as response:
+            result = json.loads(response.read().decode())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        logger.error("Senso AI error: %s %s", e.code, body)
+        raise HTTPException(
+            status_code=e.code,
+            detail=f"Senso AI error: {body}",
+        )
+    except Exception as e:
+        logger.error("Unexpected error calling Senso AI: %s", str(e))
+        raise HTTPException(status_code=502, detail=f"Failed to reach Senso AI: {e}")
+    
+    return result.get("answer")
