@@ -16,7 +16,9 @@ import os
 import json
 import secrets
 from datetime import datetime
+from html import escape
 from typing import Optional
+from urllib.parse import quote, urlencode
 from dotenv import load_dotenv
 
 from fastapi import APIRouter, FastAPI, Request, Depends, HTTPException
@@ -70,9 +72,9 @@ async def home(request: Request):
         <body>
             <h1>🏠 GrandmaCare Dashboard</h1>
             <div class="card">
-                <h3>👤 Logged in as: {user['name']}</h3>
-                <p>Email: {user['email']}</p>
-                <p>Auth0 User ID: <code>{user['sub']}</code></p>
+                <h3>👤 Logged in as: {escape(user['name'])}</h3>
+                <p>Email: {escape(user['email'])}</p>
+                <p>Auth0 User ID: <code>{escape(user['sub'])}</code></p>
                 <p>Status: <span class="badge">Authenticated via Google</span></p>
             </div>
 
@@ -90,7 +92,7 @@ async def home(request: Request):
             <h2>🔑 Your Auth0 Tokens (Debug)</h2>
             <div class="card">
                 <p><strong>Auth0 Access Token</strong> (first 50 chars):</p>
-                <pre>{user.get('access_token', 'N/A')[:50]}...</pre>
+                <pre>{escape(user.get('access_token', 'N/A')[:50])}...</pre>
                 <p><strong>Auth0 Refresh Token</strong> (present: {'✅ Yes' if user.get('refresh_token') else '❌ No'})</p>
                 <p><em>The agent uses this refresh token to exchange for Google API tokens via Token Vault.</em></p>
             </div>
@@ -135,7 +137,6 @@ async def login():
     This is the entry point of the diagram:
     User → Auth0 (with Google connection) → Token Exchange → Token Vault
     """
-    from urllib.parse import urlencode
     params = {
         "response_type": "code",
         "client_id": AUTH0_CLIENT_ID,
@@ -180,7 +181,7 @@ async def callback(request: Request):
 
     if token_response.status_code != 200:
         return JSONResponse(
-            {"error": "Token exchange failed", "detail": token_response.json()},
+            {"error": "Token exchange failed", "detail": token_response.text},
             status_code=400,
         )
 
@@ -221,8 +222,10 @@ async def logout(request: Request):
         sessions.pop(session_id, None)
 
     response = RedirectResponse(
-        f"https://{AUTH0_DOMAIN}/v2/logout?"
-        f"client_id={AUTH0_CLIENT_ID}&returnTo={AUTH0_LOGOUT_URL}"
+        f"https://{AUTH0_DOMAIN}/v2/logout?" + urlencode({
+            "client_id": AUTH0_CLIENT_ID,
+            "returnTo": AUTH0_LOGOUT_URL,
+        })
     )
     response.delete_cookie("session_id")
     return response
@@ -256,7 +259,10 @@ async def get_mgmt_token() -> str:
                 "audience": f"https://{AUTH0_DOMAIN}/api/v2/",
             },
         )
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(502, f"Auth0 Management API error: {e.response.status_code}")
     return response.json()["access_token"]
 
 
@@ -277,7 +283,7 @@ async def get_google_token_from_vault(
 
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"https://{AUTH0_DOMAIN}/api/v2/users/{user_id}",
+            f"https://{AUTH0_DOMAIN}/api/v2/users/{quote(user_id, safe='')}",
             headers={"Authorization": f"Bearer {mgmt_token}"},
         )
 
@@ -285,7 +291,7 @@ async def get_google_token_from_vault(
         raise HTTPException(400, f"Failed to fetch user identity: {response.json()}")
 
     identities = response.json().get("identities", [])
-    google_identity = next((i for i in identities if i.get("provider") == "google-oauth2"), None)
+    google_identity = next((i for i in identities if i.get("provider") == connection), None)
 
     if not google_identity:
         raise HTTPException(400, "No Google identity found. Log in with Google.")
@@ -496,7 +502,9 @@ async def run_agent_cycle(user: dict = Depends(get_current_user)):
                 headers={"Authorization": f"Bearer {gmail_token}"},
                 params={"maxResults": 3, "q": "is:inbox"},
             )
-        gmail_data = gmail_resp.json().get("messages", []) if gmail_resp.status_code == 200 else []
+        if gmail_resp.status_code != 200:
+            raise Exception(f"Gmail API error {gmail_resp.status_code}")
+        gmail_data = gmail_resp.json().get("messages", [])
         results["steps"].append({
             "step": 1,
             "action": "Token Vault → Gmail token → read inbox",
@@ -524,7 +532,9 @@ async def run_agent_cycle(user: dict = Depends(get_current_user)):
                 headers={"Authorization": f"Bearer {cal_token}"},
                 params={"timeMin": now, "maxResults": 5, "singleEvents": True, "orderBy": "startTime"},
             )
-        cal_data = cal_resp.json().get("items", []) if cal_resp.status_code == 200 else []
+        if cal_resp.status_code != 200:
+            raise Exception(f"Calendar API error {cal_resp.status_code}")
+        cal_data = cal_resp.json().get("items", [])
         results["steps"].append({
             "step": 2,
             "action": "Token Vault → Calendar token → read upcoming events",
@@ -551,7 +561,9 @@ async def run_agent_cycle(user: dict = Depends(get_current_user)):
                 headers={"Authorization": f"Bearer {drive_token}"},
                 params={"pageSize": 5, "orderBy": "modifiedTime desc"},
             )
-        drive_data = drive_resp.json().get("files", []) if drive_resp.status_code == 200 else []
+        if drive_resp.status_code != 200:
+            raise Exception(f"Drive API error {drive_resp.status_code}")
+        drive_data = drive_resp.json().get("files", [])
         results["steps"].append({
             "step": 3,
             "action": "Token Vault → Drive token → list recent files",
