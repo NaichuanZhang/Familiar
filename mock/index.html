@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Familiar — Caregiving Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════ */
+:root {
+  --primary: #D4714E;
+  --primary-light: #E8956A;
+  --primary-dark: #B85A3A;
+  --primary-subtle: #F5DDD2;
+  --bg: #FDF6EE;
+  --bg-alt: #FAF3EB;
+  --bg-warm: #F7EDE2;
+  --bg-white: #FFFCF8;
+  --text: #3D2E24;
+  --text-secondary: #7A6B5D;
+  --text-muted: #A89888;
+  --text-on-primary: #FFFAF6;
+  --success: #6B9B7A;
+  --success-subtle: #E8F2EB;
+  --warning: #D4A54E;
+  --warning-subtle: #F5EDD8;
+  --info: #7A9BB5;
+  --info-subtle: #E4EDF3;
+  --gentle-red: #C47A6E;
+  --gentle-red-subtle: #F5E0DC;
+  --border: #E8DDD0;
+  --border-light: #F0E8DD;
+  --shadow-sm: 0 1px 3px rgba(61,46,36,0.06);
+  --shadow-md: 0 4px 12px rgba(61,46,36,0.08);
+  --shadow-lg: 0 8px 24px rgba(61,46,36,0.10);
+  --shadow-warm: 0 4px 16px rgba(212,113,78,0.12);
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { line-height: 1.3; }
+h1, h2 { font-family: var(--font-display); }
+h1 { font-size: 28px; font-weight: 700; }
+h2 { font-size: 20px; font-weight: 500; }
+h3 { font-size: 15px; font-weight: 600; }
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-size: 13px;
+}
+
+/* ═══════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════ */
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  background: var(--bg-warm);
+  border-right: 1px solid var(--border-light);
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
+.main {
+  flex: 1;
+  margin-left: 240px;
+  margin-right: 340px;
+  padding: 32px 36px;
+  min-height: 100vh;
+}
+
+.right-panel {
+  width: 340px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  padding: 32px 24px;
+  border-left: 1px solid var(--border-light);
+  background: var(--bg-alt);
+}
+
+/* ═══════════════════════════════════════
+   SIDEBAR
+   ═══════════════════════════════════════ */
+.logo {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 24px;
+  color: var(--primary);
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+
+.logo-tagline {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 36px;
+}
+
+.nav { list-style: none; margin-bottom: 36px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 13.5px;
+  transition: all var(--transition-base);
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+
+.nav-item:hover {
+  background: rgba(212,113,78,0.06);
+  color: var(--text);
+}
+
+.nav-item.active {
+  background: var(--primary-subtle);
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.nav-item svg { width: 18px; height: 18px; opacity: 0.7; flex-shrink: 0; }
+.nav-item.active svg { opacity: 1; }
+
+.sidebar-section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.family-circle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.avatar-sm { width: 30px; height: 30px; font-size: 11px; }
+.avatar-lg { width: 64px; height: 64px; font-size: 22px; }
+
+.avatar-tooltip {
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+
+.avatar:hover .avatar-tooltip { opacity: 1; }
+
+.sidebar-stats {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* ═══════════════════════════════════════
+   GREETING BANNER
+   ═══════════════════════════════════════ */
+.greeting {
+  margin-bottom: 32px;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, var(--primary-subtle) 0%, #FBE8D8 50%, var(--bg-alt) 100%);
+  border-radius: var(--radius-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.greeting::after {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -20px;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, rgba(212,113,78,0.12) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.greeting h1 {
+  margin-bottom: 6px;
+  color: var(--text);
+  position: relative;
+}
+
+.greeting p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  position: relative;
+}
+
+.greeting-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+/* ═══════════════════════════════════════
+   SECTION HEADERS
+   ═══════════════════════════════════════ */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.section-header h2 { color: var(--text); }
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  background: var(--primary);
+  color: var(--text-on-primary);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 13px;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background: var(--primary-light);
+  box-shadow: var(--shadow-warm);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-white);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 12.5px;
+  transition: all var(--transition-base);
+}
+
+.btn-secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-subtle);
+}
+
+/* ═══════════════════════════════════════
+   TAB BAR
+   ═══════════════════════════════════════ */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-warm);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  margin-bottom: 20px;
+  width: fit-content;
+}
+
+.tab {
+  padding: 7px 18px;
+  border-radius: var(--radius-full);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all var(--transition-base);
+}
+
+.tab:hover { color: var(--text); }
+
+.tab.active {
+  background: var(--bg-white);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ═══════════════════════════════════════
+   CALL CARDS
+   ═══════════════════════════════════════ */
+.call-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.call-card {
+  background: var(--bg-white);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border-left: 4px solid transparent;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px);
+  animation: fadeSlideUp 0.5s ease forwards;
+}
+
+.call-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.call-card.type-medicine { border-left-color: var(--warning); }
+.call-card.type-checkin { border-left-color: var(--success); }
+
+.call-card.status-completed {
+  opacity: 0.7 !important;
+  background: var(--bg-alt);
+}
+
+.call-card.status-missed { border-left-color: var(--gentle-red); }
+
+.call-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.call-type-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.type-medicine .call-type-icon { background: var(--warning-subtle); }
+.type-checkin .call-type-icon { background: var(--success-subtle); }
+
+.call-card-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.call-card-purpose {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.call-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.badge-cadence {
+  background: var(--bg-warm);
+  color: var(--text-secondary);
+}
+
+.badge-time {
+  background: var(--primary-subtle);
+  color: var(--primary-dark);
+}
+
+.badge-status-completed {
+  background: var(--success-subtle);
+  color: var(--success);
+}
+
+.badge-status-missed {
+  background: var(--gentle-red-subtle);
+  color: var(--gentle-red);
+}
+
+.badge-status-upcoming {
+  background: var(--info-subtle);
+  color: var(--info);
+}
+
+.call-card-assignee {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.call-card-assignee .avatar-sm { width: 22px; height: 22px; font-size: 9px; }
+
+.call-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.btn-card {
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.btn-call {
+  background: var(--primary);
+  color: var(--text-on-primary);
+}
+
+.btn-call:hover { background: var(--primary-light); }
+
+.btn-edit {
+  background: var(--bg-warm);
+  color: var(--text-secondary);
+}
+
+.btn-edit:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════
+   RECENT ACTIVITY
+   ═══════════════════════════════════════ */
+.activity-list { list-style: none; }
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-light);
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fadeSlideUp 0.4s ease forwards;
+}
+
+.activity-item:last-child { border-bottom: none; }
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.activity-dot.call-completed { background: var(--success); }
+.activity-dot.call-missed { background: var(--gentle-red); }
+.activity-dot.action-added { background: var(--warning); }
+
+.activity-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.activity-text strong { font-weight: 600; }
+
+.activity-time {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════
+   RIGHT PANEL — PATIENT CARD
+   ═══════════════════════════════════════ */
+.patient-card {
+  text-align: center;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.patient-card .avatar-lg { margin: 0 auto 14px; }
+
+.patient-name {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.patient-nickname {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.patient-details {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.health-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.health-status.stable {
+  background: var(--success-subtle);
+  color: var(--success);
+}
+
+.health-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s infinite;
+}
+
+.last-contact {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+
+/* ═══════════════════════════════════════
+   RIGHT PANEL — ACTION ITEMS
+   ═══════════════════════════════════════ */
+.action-items-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.action-items-header h3 { font-size: 14px; }
+
+.action-count {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--primary);
+  color: var(--text-on-primary);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-list { list-style: none; margin-bottom: 28px; }
+
+.action-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+  transition: opacity var(--transition-base);
+}
+
+.action-item:last-child { border-bottom: none; }
+
+.action-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  margin-top: 1px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-white);
+}
+
+.action-checkbox:hover { border-color: var(--primary); }
+
+.action-checkbox.checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.action-checkbox.checked::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-top: -2px;
+}
+
+.action-item.done .action-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.action-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.action-source {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.action-priority {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.priority-high { background: var(--gentle-red); }
+.priority-medium { background: var(--warning); }
+.priority-low { background: var(--info); }
+
+/* ═══════════════════════════════════════
+   RIGHT PANEL — FAMILY NOTES
+   ═══════════════════════════════════════ */
+.notes-section h3 {
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.note-card {
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-light);
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.note-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.note-author .avatar-sm { width: 20px; height: 20px; font-size: 8px; }
+
+.note-date {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* ═══════════════════════════════════════
+   MODAL
+   ═══════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(61,46,36,0.35);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-base);
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal {
+  background: var(--bg-white);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  width: 520px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(20px);
+  transition: transform var(--transition-slow);
+}
+
+.modal-overlay.open .modal { transform: translateY(0); }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.modal-header h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 18px;
+  transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+  background: var(--bg-warm);
+  color: var(--text);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg-white);
+  transition: border-color var(--transition-fast);
+  outline: none;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(212,113,78,0.1);
+}
+
+.form-textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%237A6B5D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.type-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.type-option {
+  flex: 1;
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.type-option:hover { border-color: var(--primary-light); }
+
+.type-option.selected {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+}
+
+.type-option-icon { font-size: 24px; margin-bottom: 6px; }
+.type-option-label { font-size: 13px; font-weight: 600; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+
+/* ═══════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════ */
+@keyframes fadeSlideUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════ */
+@media (max-width: 1200px) {
+  .right-panel { width: 300px; }
+  .main { margin-right: 300px; }
+}
+
+@media (max-width: 1024px) {
+  .right-panel { display: none; }
+  .main { margin-right: 0; }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: -260px;
+    transition: left var(--transition-slow);
+    z-index: 50;
+    box-shadow: var(--shadow-lg);
+  }
+  .sidebar.open { left: 0; }
+  .main { margin-left: 0; padding: 20px 16px; }
+  .call-grid { grid-template-columns: 1fr; }
+  .mobile-menu-btn { display: flex !important; }
+  .greeting { padding: 20px 24px; }
+  .greeting h1 { font-size: 22px; }
+}
+
+.mobile-menu-btn {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 40;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--bg-white);
+  box-shadow: var(--shadow-md);
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- MOBILE MENU BUTTON -->
+<button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('open')">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<div class="app">
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <aside class="sidebar">
+    <div class="logo">Familiar</div>
+    <div class="logo-tagline">Care, connected</div>
+
+    <ul class="nav">
+      <li class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </li>
+      <li class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Call Schedule
+      </li>
+      <li class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        Action Items
+      </li>
+      <li class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Family Circle
+      </li>
+      <li class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </li>
+    </ul>
+
+    <div class="sidebar-section-label">Family Circle</div>
+    <div class="family-circle" id="familyCircle"></div>
+
+    <div class="sidebar-stats">
+      <div class="stat-row">
+        <span>Calls this week</span>
+        <span class="stat-value">12</span>
+      </div>
+      <div class="stat-row">
+        <span>Items pending</span>
+        <span class="stat-value">4</span>
+      </div>
+      <div class="stat-row">
+        <span>Day streak</span>
+        <span class="stat-value" style="color: var(--primary)">8</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN CONTENT ══════════ -->
+  <main class="main">
+    <div class="greeting">
+      <div class="greeting-date" id="greetingDate"></div>
+      <h1 id="greetingText"></h1>
+      <p>Mom has <strong>2 calls</strong> scheduled today and <strong>4 action items</strong> pending</p>
+    </div>
+
+    <div class="section-header">
+      <h2>Call Schedule</h2>
+      <button class="btn-primary" onclick="openModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Call Task
+      </button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-filter="today" onclick="switchTab(this)">Today</button>
+      <button class="tab" data-filter="week" onclick="switchTab(this)">This Week</button>
+      <button class="tab" data-filter="all" onclick="switchTab(this)">All</button>
+    </div>
+
+    <div class="call-grid" id="callGrid"></div>
+
+    <div class="section-header">
+      <h2>Recent Activity</h2>
+    </div>
+    <ul class="activity-list" id="activityList"></ul>
+  </main>
+
+  <!-- ══════════ RIGHT PANEL ══════════ -->
+  <aside class="right-panel">
+    <div class="patient-card" id="patientCard"></div>
+
+    <div class="action-items-header">
+      <h3>Action Items</h3>
+      <div class="action-count" id="actionCount"></div>
+    </div>
+    <ul class="action-list" id="actionList"></ul>
+
+    <div class="notes-section">
+      <h3>Family Notes</h3>
+      <div id="notesList"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- ══════════ NEW CALL TASK MODAL ══════════ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>New Call Task</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+
+    <div class="form-group">
+      <div class="form-label">Call Type</div>
+      <div class="type-selector">
+        <div class="type-option selected" onclick="selectType(this)">
+          <div class="type-option-icon">💊</div>
+          <div class="type-option-label">Medicine Reminder</div>
+        </div>
+        <div class="type-option" onclick="selectType(this)">
+          <div class="type-option-icon">💛</div>
+          <div class="type-option-label">Daily Check-in</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Task Title</label>
+      <input class="form-input" type="text" placeholder="e.g., Morning Medicine Reminder">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Cadence</label>
+        <select class="form-select">
+          <option>Daily</option>
+          <option>Weekly</option>
+          <option>Every other day</option>
+          <option>Weekdays only</option>
+          <option>Custom</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Time</label>
+        <input class="form-input" type="time" value="09:00">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Assigned To</label>
+      <select class="form-select">
+        <option>Sarah Chen (You)</option>
+        <option>David Chen</option>
+        <option>Lisa Wong</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Purpose & Notes</label>
+      <textarea class="form-textarea" placeholder="What should be discussed or reminded during this call?"></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="closeModal()">Create Call Task</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   MOCK DATA
+   ═══════════════════════════════════════ */
+const DATA = {
+  currentUser: { id: 'sarah-chen', name: 'Sarah Chen', relationship: 'Daughter', initials: 'SC', color: '#D4714E' },
+  patient: {
+    name: 'Margaret Chen',
+    nickname: 'Mom',
+    age: 78,
+    location: 'San Francisco, CA',
+    healthStatus: 'stable',
+    lastContacted: '2 hours ago',
+    initials: 'MC',
+    color: '#B85A3A',
+  },
+  family: [
+    { name: 'Sarah Chen', initials: 'SC', relationship: 'Daughter', color: '#D4714E' },
+    { name: 'David Chen', initials: 'DC', relationship: 'Son', color: '#7A9BB5' },
+    { name: 'Lisa Wong', initials: 'LW', relationship: 'Niece', color: '#6B9B7A' },
+  ],
+  callTasks: [
+    {
+      id: 1, type: 'medicine', title: 'Morning Medicine Reminder', cadence: 'Daily', time: '9:00 AM',
+      assignee: { name: 'Sarah Chen', initials: 'SC', color: '#D4714E' },
+      purpose: 'Remind Mom to take morning medications and check how she slept',
+      status: 'upcoming', lastCompleted: 'Yesterday, 9:02 AM',
+      filter: ['today', 'week', 'all'],
+    },
+    {
+      id: 2, type: 'checkin', title: 'Afternoon Check-in', cadence: 'Daily', time: '2:00 PM',
+      assignee: { name: 'David Chen', initials: 'DC', color: '#7A9BB5' },
+      purpose: 'General wellness check — ask about meals, mood, and any needs for the day',
+      status: 'completed', lastCompleted: 'Today, 2:15 PM',
+      filter: ['today', 'week', 'all'],
+    },
+    {
+      id: 3, type: 'medicine', title: 'Evening Medicine Reminder', cadence: 'Daily', time: '7:00 PM',
+      assignee: { name: 'Sarah Chen', initials: 'SC', color: '#D4714E' },
+      purpose: 'Evening medication check and wind-down conversation',
+      status: 'upcoming', lastCompleted: 'Yesterday, 7:05 PM',
+      filter: ['today', 'week', 'all'],
+    },
+    {
+      id: 4, type: 'checkin', title: 'Weekend Family Call', cadence: 'Weekly', time: '11:00 AM',
+      assignee: { name: 'Lisa Wong', initials: 'LW', color: '#6B9B7A' },
+      purpose: 'Extended family check-in, video call if possible. Catch up on the week',
+      status: 'upcoming', lastCompleted: 'Last Saturday, 11:20 AM',
+      filter: ['week', 'all'],
+    },
+    {
+      id: 5, type: 'medicine', title: 'Midweek Vitamin Check', cadence: 'Weekly', time: '10:00 AM',
+      assignee: { name: 'David Chen', initials: 'DC', color: '#7A9BB5' },
+      purpose: 'Verify vitamin and supplement supply, check for any refills needed',
+      status: 'missed', lastCompleted: 'Missed — Mar 19',
+      filter: ['week', 'all'],
+    },
+    {
+      id: 6, type: 'checkin', title: 'Monthly Health Review', cadence: 'Monthly', time: '3:00 PM',
+      assignee: { name: 'Sarah Chen', initials: 'SC', color: '#D4714E' },
+      purpose: 'Review monthly health trends, upcoming appointments, and medication changes',
+      status: 'upcoming', lastCompleted: 'Feb 27, 3:10 PM',
+      filter: ['all'],
+    },
+  ],
+  actionItems: [
+    { id: 1, text: 'Pick up prescription refill from CVS', priority: 'high', source: 'Morning call, Mar 26', done: false },
+    { id: 2, text: 'Schedule eye doctor appointment', priority: 'medium', source: 'Check-in, Mar 25', done: false },
+    { id: 3, text: 'Call insurance about claim #4521', priority: 'high', source: 'Check-in, Mar 24', done: false },
+    { id: 4, text: 'Order compression socks from Amazon', priority: 'medium', source: 'Morning call, Mar 25', done: false },
+    { id: 5, text: 'Buy new reading glasses', priority: 'low', source: 'Weekend call, Mar 22', done: true },
+  ],
+  activity: [
+    { type: 'call-completed', actor: 'Sarah', detail: 'Morning Medicine Reminder — 7 min', time: 'Today, 9:02 AM' },
+    { type: 'call-completed', actor: 'David', detail: 'Afternoon Check-in — 12 min', time: 'Today, 2:15 PM' },
+    { type: 'action-added', actor: 'Sarah', detail: 'Added: Pick up prescription refill', time: 'Today, 9:05 AM' },
+    { type: 'call-missed', actor: 'David', detail: 'Midweek Vitamin Check — Missed', time: 'Wed, Mar 19' },
+    { type: 'call-completed', actor: 'Sarah', detail: 'Morning Medicine Reminder — 5 min', time: 'Yesterday, 9:01 AM' },
+  ],
+  notes: [
+    { author: 'David Chen', initials: 'DC', color: '#7A9BB5', text: 'Mom mentioned her knee has been bothering her again during Tuesday\'s call. Might want to ask about it.', date: 'Mar 25' },
+    { author: 'Lisa Wong', initials: 'LW', color: '#6B9B7A', text: 'Brought groceries over on Saturday. She seemed in great spirits and was excited about her garden.', date: 'Mar 22' },
+  ],
+};
+
+/* ═══════════════════════════════════════
+   RENDER FUNCTIONS
+   ═══════════════════════════════════════ */
+function renderGreeting() {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  document.getElementById('greetingDate').textContent = new Date().toLocaleDateString('en-US', options);
+  document.getElementById('greetingText').textContent = `${greeting}, Sarah`;
+}
+
+function renderFamilyCircle() {
+  const container = document.getElementById('familyCircle');
+  container.innerHTML = DATA.family.map(m =>
+    `<div class="avatar" style="background: linear-gradient(135deg, ${m.color}, ${m.color}dd)">
+      ${m.initials}
+      <span class="avatar-tooltip">${m.name}</span>
+    </div>`
+  ).join('');
+}
+
+function renderCallCards(filter = 'today') {
+  const grid = document.getElementById('callGrid');
+  const tasks = DATA.callTasks.filter(t => t.filter.includes(filter));
+
+  grid.innerHTML = tasks.map((t, i) => {
+    const typeClass = t.type === 'medicine' ? 'type-medicine' : 'type-checkin';
+    const statusClass = `status-${t.status}`;
+    const icon = t.type === 'medicine' ? '💊' : '💛';
+    const statusBadge = t.status === 'completed'
+      ? '<span class="badge badge-status-completed">Completed</span>'
+      : t.status === 'missed'
+        ? '<span class="badge badge-status-missed">Missed</span>'
+        : '<span class="badge badge-status-upcoming">Upcoming</span>';
+
+    return `<div class="call-card ${typeClass} ${statusClass}" style="animation-delay: ${i * 0.08}s">
+      <div class="call-card-header">
+        <div>
+          <div class="call-card-title">${t.title}</div>
+          <div class="call-card-purpose">${t.purpose}</div>
+        </div>
+        <div class="call-type-icon">${icon}</div>
+      </div>
+      <div class="call-card-meta">
+        <span class="badge badge-cadence">${t.cadence}</span>
+        <span class="badge badge-time">${t.time}</span>
+        ${statusBadge}
+      </div>
+      <div class="call-card-assignee">
+        <div class="avatar avatar-sm" style="background: linear-gradient(135deg, ${t.assignee.color}, ${t.assignee.color}dd)">${t.assignee.initials}</div>
+        <span>${t.assignee.name} · Last: ${t.lastCompleted}</span>
+      </div>
+      <div class="call-card-actions">
+        ${t.status !== 'completed' ? '<button class="btn-card btn-call">Call Now</button>' : ''}
+        <button class="btn-card btn-edit">Edit</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderActivity() {
+  const list = document.getElementById('activityList');
+  list.innerHTML = DATA.activity.map((a, i) => `
+    <li class="activity-item" style="animation-delay: ${i * 0.06}s">
+      <div class="activity-dot ${a.type}"></div>
+      <div>
+        <div class="activity-text"><strong>${a.actor}</strong> — ${a.detail}</div>
+        <div class="activity-time">${a.time}</div>
+      </div>
+    </li>
+  `).join('');
+}
+
+function renderPatientCard() {
+  const p = DATA.patient;
+  document.getElementById('patientCard').innerHTML = `
+    <div class="avatar avatar-lg" style="background: linear-gradient(135deg, ${p.color}, ${p.color}cc)">${p.initials}</div>
+    <div class="patient-name">${p.name}</div>
+    <div class="patient-nickname">"${p.nickname}"</div>
+    <div class="patient-details">${p.age} years old · ${p.location}</div>
+    <div class="health-status stable">
+      <span class="health-status-dot"></span>
+      Stable
+    </div>
+    <div class="last-contact">Last contacted ${p.lastContacted}</div>
+  `;
+}
+
+function renderActionItems() {
+  const list = document.getElementById('actionList');
+  const pending = DATA.actionItems.filter(a => !a.done).length;
+  document.getElementById('actionCount').textContent = pending;
+
+  list.innerHTML = DATA.actionItems.map(a => {
+    const doneClass = a.done ? 'done' : '';
+    const checkedClass = a.done ? 'checked' : '';
+    const priorityDot = `<span class="action-priority priority-${a.priority}"></span>`;
+    return `<li class="action-item ${doneClass}">
+      <div class="action-checkbox ${checkedClass}" onclick="toggleAction(this, ${a.id})"></div>
+      <div>
+        <div class="action-text">${priorityDot}${a.text}</div>
+        <div class="action-source">${a.source}</div>
+      </div>
+    </li>`;
+  }).join('');
+}
+
+function renderNotes() {
+  const container = document.getElementById('notesList');
+  container.innerHTML = DATA.notes.map(n => `
+    <div class="note-card">
+      <div class="note-author">
+        <div class="avatar avatar-sm" style="background: linear-gradient(135deg, ${n.color}, ${n.color}dd)">${n.initials}</div>
+        ${n.author}
+      </div>
+      ${n.text}
+      <div class="note-date">${n.date}</div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════
+   INTERACTIONS
+   ═══════════════════════════════════════ */
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderCallCards(el.dataset.filter);
+}
+
+function toggleAction(checkbox, id) {
+  const item = DATA.actionItems.find(a => a.id === id);
+  item.done = !item.done;
+  renderActionItems();
+}
+
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function closeModalOutside(e) {
+  if (e.target === e.currentTarget) closeModal();
+}
+
+function selectType(el) {
+  document.querySelectorAll('.type-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+/* ═══════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════ */
+renderGreeting();
+renderFamilyCircle();
+renderCallCards('today');
+renderActivity();
+renderPatientCard();
+renderActionItems();
+renderNotes();
+</script>
+</body>
+</html>
