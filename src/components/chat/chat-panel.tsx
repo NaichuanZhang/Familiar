@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "./types";
+import { MessageContent } from "./message-content";
 
 type ChatPanelProps = {
   open: boolean;
@@ -39,7 +40,7 @@ export function ChatPanel({
     (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     },
-    [onClose]
+    [onClose],
   );
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export function ChatPanel({
         "h-[500px] max-h-[calc(100vh-120px)]",
         "rounded-2xl border border-border-light bg-bg-white shadow-lg",
         "animate-[chatSlideUp_0.3s_ease-out]",
-        "max-md:bottom-20 max-md:right-4"
+        "max-md:bottom-20 max-md:right-4",
       )}
     >
       {/* Header */}
@@ -88,7 +89,7 @@ export function ChatPanel({
             key={msg.id}
             className={cn(
               "flex",
-              msg.role === "user" ? "justify-end" : "justify-start"
+              msg.role === "user" ? "justify-end" : "justify-start",
             )}
           >
             <div
@@ -96,10 +97,14 @@ export function ChatPanel({
                 "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
                 msg.role === "user"
                   ? "rounded-br-sm bg-primary text-text-on-primary"
-                  : "rounded-bl-sm bg-bg-warm text-text"
+                  : "rounded-bl-sm bg-bg-warm text-text",
               )}
             >
-              {msg.content}
+              {msg.role === "assistant" ? (
+                <MessageContent content={msg.content} />
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         ))}
@@ -136,7 +141,7 @@ export function ChatPanel({
             "placeholder:text-text-muted outline-none",
             "transition-all duration-200",
             "focus:border-primary focus:shadow-[0_0_0_3px_rgba(212,113,78,0.1)]",
-            "disabled:opacity-50"
+            "disabled:opacity-50",
           )}
         />
         <button
@@ -147,7 +152,7 @@ export function ChatPanel({
             "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
             "bg-primary text-text-on-primary transition-all duration-200",
             "hover:bg-primary-dark cursor-pointer",
-            "disabled:opacity-40 disabled:cursor-not-allowed"
+            "disabled:opacity-40 disabled:cursor-not-allowed",
           )}
         >
           <Send size={16} />
