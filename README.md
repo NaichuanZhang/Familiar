@@ -81,6 +81,7 @@ Set these in Vercel via `vercel env add`:
 |----------|-------------|
 | `BLAND_API_KEY` | Bland AI API key |
 | `BLAND_AGENT_ID` | Default Bland AI persona ID (Elderly Care Companion) |
+| `DEFAULT_PHONE_NUMBER` | Default patient phone number for calls |
 | `BASE_URL` | Deployed app URL for webhook callbacks |
 
 ## Development

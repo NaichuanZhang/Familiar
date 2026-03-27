@@ -26,7 +26,8 @@ BLAND_API_URL = "https://api.bland.ai/v1/calls"
 # ── Models ──────────────────────────────────────────────
 
 class CallRequest(BaseModel):
-    phone_number: str
+    phone_number: str | None = None
+    patient_id: str | None = None  # future: look up patient profile
     task: str | None = None
     pathway_id: str | None = None
     persona_id: str | None = None
@@ -57,6 +58,12 @@ def trigger_call(req: CallRequest):
     base_url = os.environ.get("BASE_URL", "")
     webhook_url = f"{base_url}/api/calls/webhook" if base_url else None
 
+    # Resolve phone: request > (future: patient profile) > env default
+    phone = req.phone_number or os.environ.get("DEFAULT_PHONE_NUMBER")
+    if not phone:
+        raise HTTPException(status_code=400, detail="No phone number provided")
+
+    # Resolve agent: request > (future: patient profile) > env default
     default_agent_id = os.environ.get("BLAND_AGENT_ID")
     has_explicit_agent = any([req.task, req.pathway_id, req.persona_id])
 
@@ -67,7 +74,7 @@ def trigger_call(req: CallRequest):
         )
 
     payload = {
-        "phone_number": req.phone_number,
+        "phone_number": phone,
         "voice": req.voice,
         "max_duration": req.max_duration,
         "record": req.record,
