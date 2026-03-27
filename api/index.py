@@ -7,7 +7,7 @@ import urllib.request
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 
 logger = logging.getLogger("familiar")
 
@@ -97,6 +97,7 @@ def trigger_call(req: CallRequest):
     headers = {
         "Authorization": api_key,
         "Content-Type": "application/json",
+        "User-Agent": "Familiar/0.1.0",
     }
 
     request = urllib.request.Request(
@@ -113,6 +114,9 @@ def trigger_call(req: CallRequest):
             status_code=e.code,
             detail=f"Bland AI error: {body}",
         )
+    except Exception as e:
+        logger.error("Unexpected error calling Bland AI: %s", str(e))
+        raise HTTPException(status_code=502, detail=f"Failed to reach Bland AI: {e}")
 
     return {
         "call_id": result.get("call_id"),
