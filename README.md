@@ -30,27 +30,33 @@ Familiar turns ad-hoc check-ins into a reliable care rhythm. Family members coll
 ## Tech Stack
 
 ### Frontend
-- **Static HTML mock** — Dashboard design prototype (`mock/index.html`)
-- Deployed on **Vercel**
+- **Next.js 16** (App Router) — React server and client components
+- **Tailwind CSS v4** — Utility-first styling with custom design tokens
+- **Lucide React** — Icon library
 
 ### Backend
-- **FastAPI** (Python) — API server
-- **uv** — Python package and project manager
+- **Next.js API Routes** — RESTful API with Zod validation
+- **Drizzle ORM** — Type-safe database access with PostgreSQL
+- **Ghost** (ghost.build) — Managed PostgreSQL database
 
 ### Services & APIs
 - **Bland AI** — Voice agent platform; the app triggers Bland AI to make the actual calls to patients
 
+### Testing
+- **Vitest** — Unit and integration tests
+- **React Testing Library** — Component tests
+- **Playwright** — E2E tests (configured)
+
 ### Planned
 - **Auth0** — Authentication and user management
-- **Ghost** (ghost.build) — Managed PostgreSQL database
-- **Next.js** — React dashboard UI (replacing static mock)
-- **Macrospace** — Automated code review
 
 ## Architecture
 
-The backend runs as FastAPI serverless functions on Vercel's Python runtime. All API routes are defined in `api/index.py` and routed via Vercel rewrites. Python 3.12 is pinned via `.python-version`.
+The app runs as a Next.js application on Vercel. Server components fetch data directly from Ghost PostgreSQL via Drizzle ORM. Client components handle interactivity (tab filtering, action item toggling, call triggering).
 
-Voice calls are triggered via the Bland AI API. The app sends a call request to Bland AI with a persona (the "Elderly Care Companion" agent), and Bland AI calls the patient. After the call completes, Bland AI sends the transcript back to our webhook endpoint.
+API routes in `src/app/api/` provide a RESTful interface with consistent JSON envelope responses (`{ success, data, error }`). All input is validated with Zod schemas.
+
+Voice calls are triggered via the Bland AI API. When a user clicks "Call Now", the app looks up the patient's phone number from the database and sends a call request to Bland AI. After the call completes, Bland AI sends the transcript back to the webhook endpoint, which writes it to the `call_logs` table.
 
 ## Database Schema
 
@@ -200,73 +206,115 @@ CREATE INDEX idx_action_items_assigned ON action_items(assigned_user_id, status)
 | `/api/health` | GET | Health check |
 | `/api/calls/trigger` | POST | Trigger a Bland AI voice call |
 | `/api/calls/webhook` | POST | Receive post-call transcript from Bland AI |
+| `/api/users` | GET, POST | List / create users |
+| `/api/users/[id]` | GET, PATCH, DELETE | Get / update / delete user |
+| `/api/patients` | GET, POST | List / create patients |
+| `/api/patients/[id]` | GET, PATCH, DELETE | Get / update / delete patient |
+| `/api/patients/[id]/family` | GET | Get family circle for patient |
+| `/api/patients/[id]/activity` | GET | Get activity feed for patient |
+| `/api/schedules` | GET, POST | List / create call schedules |
+| `/api/schedules/[id]` | GET, PATCH, DELETE | Get / update / delete schedule |
+| `/api/action-items` | GET, POST | List / create action items |
+| `/api/action-items/[id]` | GET, PATCH, DELETE | Get / update / delete action item |
+| `/api/action-items/[id]/toggle` | PATCH | Toggle action item completion |
 
 ### POST `/api/calls/trigger`
 
-Triggers an outbound voice call via Bland AI. All fields are optional — defaults are pulled from environment variables.
+Triggers an outbound voice call via Bland AI. Phone number is resolved from: request body > patient profile DB lookup > `DEFAULT_PHONE_NUMBER` env var.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `phone_number` | string? | `DEFAULT_PHONE_NUMBER` env var | Patient phone number |
+| `phoneNumber` | string? | Patient DB phone | Phone number to call |
+| `patientId` | string? | — | Patient ID (used for phone lookup) |
 | `task` | string? | — | Free-form task/prompt for the call |
-| `pathway_id` | string? | — | Bland AI pathway ID |
-| `persona_id` | string? | `BLAND_AGENT_ID` env var | Bland AI persona ID |
+| `pathwayId` | string? | — | Bland AI pathway ID |
+| `personaId` | string? | `BLAND_AGENT_ID` env var | Bland AI persona ID |
 | `voice` | string | `"mason"` | Voice for the call |
-| `max_duration` | int | `10` | Max call duration in minutes |
+| `maxDuration` | int | `10` | Max call duration in minutes |
 | `record` | bool | `true` | Whether to record the call |
-| `metadata` | dict? | — | Arbitrary metadata passed through |
-
-At least one of `task`, `pathway_id`, `persona_id`, or `BLAND_AGENT_ID` env var must be set.
-
-### POST `/api/calls/webhook`
-
-Receives the post-call payload from Bland AI. Fields processed:
-
-| Field | Description |
-|-------|-------------|
-| `call_id` | Bland AI call identifier |
-| `concatenated_transcript` | Full call transcript |
-| `recording_url` | URL to the call recording |
-| `call_length` | Duration of the call |
-| `status` | Call completion status |
-| `metadata` | Metadata passed through from the trigger |
+| `metadata` | object? | — | Arbitrary metadata passed through |
 
 ## Project Structure
 
 ```
 familiar/
-  api/
-    index.py            # FastAPI app — all API routes
+  src/
+    app/
+      layout.tsx              # Root layout (fonts, metadata)
+      page.tsx                # Dashboard (server component)
+      globals.css             # Tailwind v4 theme + design tokens
+      settings/
+        page.tsx              # Settings page (patient profile editor)
+      api/
+        hello/route.ts
+        health/route.ts
+        calls/
+          trigger/route.ts    # Bland AI call trigger
+          webhook/route.ts    # Bland AI post-call webhook
+        users/                # CRUD
+        patients/             # CRUD + /family, /activity
+        schedules/            # CRUD
+        action-items/         # CRUD + /toggle
+    components/
+      ui/                     # Avatar, Badge, Button, Modal, Tabs
+      layout/                 # Sidebar, RightPanel, AppShell
+      dashboard/              # GreetingBanner, CallCard, ActivityFeed, NewCallModal
+      settings/               # PatientProfileForm
+    db/
+      index.ts                # Drizzle client
+      schema/                 # 6 table schemas + relations
+    repositories/             # Data access layer (one per entity)
+    lib/
+      api/                    # Response envelope, validation helpers
+      validations/            # Zod schemas per entity
+      utils.ts                # cn(), getInitials(), formatTime()
   mock/
-    index.html          # Dashboard design mock
-  vercel.json           # Vercel routing config
-  requirements.txt      # Python dependencies
-  .python-version       # Python 3.12
+    index.html                # Original design mock (reference)
+  e2e/                        # Playwright E2E tests
+  vitest.config.ts
+  playwright.config.ts
+  drizzle.config.ts
+  next.config.ts
+  vercel.json
+  package.json
+  tsconfig.json
 ```
 
 ## Environment Variables
 
-Set these in Vercel using `printf` (not `echo`, which adds a trailing newline):
-
-```bash
-printf 'your-value' | vercel env add VAR_NAME production
-```
-
 | Variable | Description |
 |----------|-------------|
+| `DATABASE_URL` | Ghost PostgreSQL connection string |
 | `BLAND_API_KEY` | Bland AI API key |
 | `BLAND_AGENT_ID` | Default Bland AI persona ID (Elderly Care Companion) |
-| `DEFAULT_PHONE_NUMBER` | Default patient phone number for calls |
+| `DEFAULT_PHONE_NUMBER` | Fallback patient phone number for calls |
 | `BASE_URL` | Deployed app URL for webhook callbacks |
 
 ## Development
 
 ```bash
-pip install -r requirements.txt
-uvicorn api.index:app --reload
+npm install
+npm run dev
 ```
 
-The API will be available at `http://localhost:8000`.
+The app will be available at `http://localhost:3000`.
+
+### Testing
+
+```bash
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:coverage # With coverage report
+npm run test:e2e      # Playwright E2E tests
+```
+
+### Database
+
+```bash
+npm run db:push       # Push schema changes to database
+npm run db:generate   # Generate migrations
+npm run db:studio     # Open Drizzle Studio
+```
 
 ## Deployment
 
@@ -279,4 +327,4 @@ vercel --prod          # Production deployment
 
 ## Status
 
-Early stage — Bland AI voice call integration working end-to-end with flexible call trigger (custom task, persona, or pathway) and post-call webhook. Deployed on Vercel.
+Full-stack Next.js app with Ghost PostgreSQL database. Dashboard with call scheduling, action item tracking, and Bland AI voice call integration working end-to-end. Settings page for patient profile management. 37 tests passing.

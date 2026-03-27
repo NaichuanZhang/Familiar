@@ -1,1 +1,13 @@
 .vercel
+node_modules/
+.next/
+out/
+.env
+.env.local
+.env.production.local
+coverage/
+test-results/
+playwright-report/
+drizzle/
+*.tsbuildinfo
+next-env.d.ts
