@@ -3,11 +3,15 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 import urllib.request
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from demos.auth0_demo import router as auth0_router
 
 logger = logging.getLogger("familiar")
 
@@ -19,6 +23,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth0_router)
 
 BLAND_API_URL = "https://api.bland.ai/v1/calls"
 

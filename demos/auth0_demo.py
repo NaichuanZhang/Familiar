@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Optional
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi import APIRouter, FastAPI, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 import httpx
 
@@ -37,6 +37,7 @@ AUTH0_CALLBACK_URL = "http://localhost:8000/auth/callback"
 AUTH0_LOGOUT_URL = "http://localhost:8000"
 
 app = FastAPI(title="GrandmaCare — Auth0 Demo")
+router = APIRouter()
 
 # In-memory session store (use Redis in production)
 sessions = {}
@@ -46,7 +47,7 @@ sessions = {}
 # Auth0 Authentication Flow
 # ─────────────────────────────────────────────
 
-@app.get("/", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Landing page — shows login or dashboard based on session."""
     session_id = request.cookies.get("session_id")
@@ -126,7 +127,7 @@ async def home(request: Request):
     """)
 
 
-@app.get("/auth/login")
+@router.get("/auth/login")
 async def login():
     """
     Redirect to Auth0 Universal Login.
@@ -149,7 +150,7 @@ async def login():
     return RedirectResponse(f"https://{AUTH0_DOMAIN}/authorize?{urlencode(params)}")
 
 
-@app.get("/auth/callback")
+@router.get("/auth/callback")
 async def callback(request: Request):
     """
     Auth0 redirects here after user authenticates.
@@ -212,7 +213,7 @@ async def callback(request: Request):
     return response
 
 
-@app.get("/auth/logout")
+@router.get("/auth/logout")
 async def logout(request: Request):
     """Clear session and redirect to Auth0 logout."""
     session_id = request.cookies.get("session_id")
@@ -300,7 +301,7 @@ async def get_google_token_from_vault(
 # API Endpoints: Agent reads Google APIs
 # ─────────────────────────────────────────────
 
-@app.get("/api/gmail")
+@router.get("/api/gmail")
 async def read_gmail(user: dict = Depends(get_current_user)):
     """
     Agent reads Gmail using token from Auth0 Token Vault.
@@ -372,7 +373,7 @@ async def _get_email_detail(token: str, message_id: str) -> dict:
     return {"id": message_id, "error": "Could not fetch details"}
 
 
-@app.get("/api/calendar")
+@router.get("/api/calendar")
 async def read_calendar(user: dict = Depends(get_current_user)):
     """
     Agent reads Google Calendar using token from Auth0 Token Vault.
@@ -422,7 +423,7 @@ async def read_calendar(user: dict = Depends(get_current_user)):
         return {"status": "calendar_api_error", "code": response.status_code, "detail": response.json()}
 
 
-@app.get("/api/drive")
+@router.get("/api/drive")
 async def read_drive(user: dict = Depends(get_current_user)):
     """
     Agent reads Google Drive using token from Auth0 Token Vault.
@@ -464,7 +465,7 @@ async def read_drive(user: dict = Depends(get_current_user)):
         return {"status": "drive_api_error", "code": response.status_code, "detail": response.json()}
 
 
-@app.get("/api/agent-cycle")
+@router.get("/api/agent-cycle")
 async def run_agent_cycle(user: dict = Depends(get_current_user)):
     """
     Full agent cycle: reads all Google APIs, then reasons.
