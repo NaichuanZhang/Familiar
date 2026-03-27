@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
   const req = validation.data;
   const baseUrl = process.env.BASE_URL ?? "";
   const webhookUrl = baseUrl ? `${baseUrl}/api/calls/webhook` : undefined;
+  const webhookSecret = process.env.BLAND_WEBHOOK_SECRET;
 
   let phone = req.phoneNumber;
   if (!phone && req.patientId) {
@@ -46,11 +47,15 @@ export async function POST(request: NextRequest) {
       record: req.record,
       metadata: req.metadata,
       webhookUrl,
+      webhookSecret,
     });
     return apiSuccess(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    if (message.includes("not configured") || message.includes("Provide task")) {
+    if (
+      message.includes("not configured") ||
+      message.includes("Provide task")
+    ) {
       return apiError(message, 400);
     }
     return apiError(`Failed to trigger call: ${message}`, 502);

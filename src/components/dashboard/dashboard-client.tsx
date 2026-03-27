@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { GreetingBanner } from "./greeting-banner";
 import { CallCard } from "./call-card";
-import { ActivityFeed } from "./activity-feed";
+import { ActivityFeed, type ActivityItem } from "./activity-feed";
 import { NewCallModal } from "./new-call-modal";
 import { EditCallModal } from "./edit-call-modal";
+import { CallTranscriptModal } from "./call-transcript-modal";
 import { Tabs } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -47,12 +48,7 @@ type DashboardProps = {
     status: string;
     createdAt: Date;
   }[];
-  activity: {
-    type: string;
-    detail: string;
-    timestamp: Date;
-    entityId: string;
-  }[];
+  activity: ActivityItem[];
   users: { id: string; name: string }[];
 };
 
@@ -102,6 +98,9 @@ export function DashboardClient({
   >(null);
   const [actionItems, setActionItems] = useState(initialActionItems);
   const [callingScheduleId, setCallingScheduleId] = useState<string | null>(
+    null,
+  );
+  const [transcriptItem, setTranscriptItem] = useState<ActivityItem | null>(
     null,
   );
 
@@ -206,7 +205,7 @@ export function DashboardClient({
           Recent Activity
         </h2>
       </div>
-      <ActivityFeed items={activity} />
+      <ActivityFeed items={activity} onItemClick={setTranscriptItem} />
 
       <NewCallModal
         open={modalOpen}
@@ -216,6 +215,13 @@ export function DashboardClient({
         }}
         patientId={patient.id}
         users={users}
+      />
+
+      <CallTranscriptModal
+        open={transcriptItem !== null}
+        onClose={() => setTranscriptItem(null)}
+        callData={transcriptItem?.callData ?? null}
+        timestamp={transcriptItem?.timestamp ?? new Date()}
       />
 
       {editingSchedule && (

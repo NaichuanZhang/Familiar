@@ -26,8 +26,16 @@ export default async function Home() {
     items,
     allUsers,
   ] = await Promise.all([
-    db.select().from(users).where(eq(users.id, CURRENT_USER_ID)).then((r) => r[0]),
-    db.select().from(patientProfiles).where(eq(patientProfiles.id, PATIENT_ID)).then((r) => r[0]),
+    db
+      .select()
+      .from(users)
+      .where(eq(users.id, CURRENT_USER_ID))
+      .then((r) => r[0]),
+    db
+      .select()
+      .from(patientProfiles)
+      .where(eq(patientProfiles.id, PATIENT_ID))
+      .then((r) => r[0]),
     db
       .select({
         name: users.name,
@@ -49,8 +57,8 @@ export default async function Home() {
       .where(
         and(
           eq(callSchedules.patientId, PATIENT_ID),
-          eq(callSchedules.isActive, true)
-        )
+          eq(callSchedules.isActive, true),
+        ),
       )
       .orderBy(callSchedules.scheduledTime),
     db
@@ -64,7 +72,10 @@ export default async function Home() {
       .from(actionItems)
       .where(eq(actionItems.patientId, PATIENT_ID))
       .orderBy(desc(actionItems.createdAt)),
-    db.select({ id: users.id, name: users.name }).from(users).orderBy(users.name),
+    db
+      .select({ id: users.id, name: users.name })
+      .from(users)
+      .orderBy(users.name),
   ]);
 
   if (!currentUser || !patient) {
@@ -84,6 +95,15 @@ export default async function Home() {
           : `Call ${log.status}`,
       timestamp: log.createdAt,
       entityId: log.id,
+      callData: {
+        transcript: log.transcript,
+        recordingUrl: log.recordingUrl,
+        callDurationSecs: log.callDurationSecs,
+        status: log.status,
+        sentiment: log.sentiment,
+        startedAt: log.startedAt,
+        endedAt: log.endedAt,
+      },
     })),
     ...items
       .filter((item) => item.createdAt)
@@ -96,7 +116,7 @@ export default async function Home() {
   ]
     .sort(
       (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     )
     .slice(0, 10);
 

@@ -8,6 +8,7 @@ export type TriggerCallParams = {
   record?: boolean;
   metadata?: Record<string, unknown>;
   webhookUrl?: string;
+  webhookSecret?: string;
 };
 
 export type TriggerCallResult = {
@@ -24,7 +25,11 @@ export async function triggerBlandCall(
   }
 
   const defaultAgentId = process.env.BLAND_AGENT_ID;
-  const hasExplicitAgent = !!(params.task || params.pathwayId || params.personaId);
+  const hasExplicitAgent = !!(
+    params.task ||
+    params.pathwayId ||
+    params.personaId
+  );
 
   if (!hasExplicitAgent && !defaultAgentId) {
     throw new Error(
@@ -44,7 +49,14 @@ export async function triggerBlandCall(
   if (params.personaId) payload.persona_id = params.personaId;
   if (!hasExplicitAgent && defaultAgentId) payload.persona_id = defaultAgentId;
   if (params.metadata) payload.metadata = params.metadata;
-  if (params.webhookUrl) payload.webhook = params.webhookUrl;
+  if (params.webhookUrl) {
+    payload.webhook = params.webhookUrl;
+    if (params.webhookSecret) {
+      payload.webhook_headers = {
+        "x-webhook-secret": params.webhookSecret,
+      };
+    }
+  }
 
   const response = await fetch("https://api.bland.ai/v1/calls", {
     method: "POST",

@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
 
   const baseUrl = process.env.BASE_URL ?? "";
   const webhookUrl = baseUrl ? `${baseUrl}/api/calls/webhook` : undefined;
+  const webhookSecret = process.env.BLAND_WEBHOOK_SECRET;
   const windowMinutes = 5;
 
   const activeSchedules = await callSchedulesRepository.findAllActive();
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest) {
           automated: true,
         },
         webhookUrl,
+        webhookSecret,
       });
 
       await callLogsRepository.updateStatus(log.id, "in_progress", {
