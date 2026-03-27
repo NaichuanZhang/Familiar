@@ -61,10 +61,8 @@ PostgreSQL (Ghost.build). A user (family member) can manage multiple patients. P
 ```
 users ──┤ user_patients ├── patient_profiles
                                  │
-                 ┌───────────────┼───────────────┐
-           call_schedules    call_logs      family_notes
-                                │
-                          action_items
+                    ┌────────────┼────────────┐
+              call_schedules  call_logs   action_items
 ```
 
 ### Tables
@@ -173,17 +171,6 @@ users ──┤ user_patients ├── patient_profiles
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
 
-#### `family_notes` — Freeform notes about a patient
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK, DEFAULT gen_random_uuid() |
-| patient_id | UUID | NOT NULL, FK → patient_profiles ON DELETE CASCADE |
-| author_id | UUID | NOT NULL, FK → users ON DELETE CASCADE |
-| content | TEXT | NOT NULL |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
-
 ### Indexes
 
 ```sql
@@ -196,7 +183,6 @@ CREATE INDEX idx_call_logs_patient ON call_logs(patient_id, created_at DESC);
 CREATE INDEX idx_call_logs_bland_id ON call_logs(bland_call_id);
 CREATE INDEX idx_action_items_patient ON action_items(patient_id, status);
 CREATE INDEX idx_action_items_assigned ON action_items(assigned_user_id, status);
-CREATE INDEX idx_family_notes_patient ON family_notes(patient_id, created_at DESC);
 ```
 
 ### Design Notes
