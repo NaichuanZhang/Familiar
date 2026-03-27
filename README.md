@@ -58,7 +58,7 @@ API routes in `src/app/api/` provide a RESTful interface with consistent JSON en
 
 Voice calls are triggered via the Bland AI API. When a user clicks "Call Now", the app looks up the patient's phone number from the database and sends a call request to Bland AI. After the call completes, Bland AI sends the transcript back to the webhook endpoint, which writes it to the `call_logs` table.
 
-Calls are also triggered automatically by a Vercel Cron Job that runs every 5 minutes. The scheduler checks all active call schedules against the current time in each patient's timezone, deduplicates against existing call logs for the day, and triggers calls via the shared Bland AI service.
+Calls are also triggered automatically by a Vercel Cron Job that runs daily at 9 AM UTC. The scheduler checks all active call schedules against the current time in each patient's timezone, deduplicates against existing call logs for the day, and triggers calls via the shared Bland AI service.
 
 ## Database Schema
 
@@ -263,7 +263,7 @@ familiar/
     components/
       ui/                     # Avatar, Badge, Button, Modal, Tabs
       layout/                 # Sidebar, RightPanel, AppShell
-      dashboard/              # GreetingBanner, CallCard, ActivityFeed, NewCallModal, EditCallModal
+      dashboard/              # GreetingBanner, CallCard, ActivityFeed, CallTranscriptModal, NewCallModal, EditCallModal
       settings/               # PatientProfileForm
     db/
       index.ts                # Drizzle client
@@ -296,6 +296,7 @@ familiar/
 | `BLAND_AGENT_ID` | Default Bland AI persona ID (Elderly Care Companion) |
 | `DEFAULT_PHONE_NUMBER` | Fallback patient phone number for calls |
 | `BASE_URL` | Deployed app URL for webhook callbacks |
+| `BLAND_WEBHOOK_SECRET` | Secret sent by Bland AI in webhook headers for verification |
 | `CRON_SECRET` | Secret for Vercel Cron Job authentication |
 
 ## Development
@@ -335,4 +336,4 @@ vercel --prod          # Production deployment
 
 ## Status
 
-Full-stack Next.js app with Ghost PostgreSQL database. Dashboard with call scheduling (edit/delete), action item tracking, and Bland AI voice call integration working end-to-end. Automatic call scheduling via Vercel Cron (every 5 minutes). Settings page for patient profile management. 32+ tests passing.
+Full-stack Next.js app with Ghost PostgreSQL database. Dashboard with call scheduling (edit/delete), action item tracking, call transcript viewer, and Bland AI voice call integration working end-to-end. Automatic call scheduling via Vercel Cron (daily at 9 AM UTC). Secure webhook with secret verification. Settings page for patient profile management.
