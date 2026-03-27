@@ -49,12 +49,16 @@ _This list will grow as the project evolves._
 
 The backend runs as FastAPI serverless functions on Vercel's Python runtime. All API routes are defined in `api/index.py` and routed via Vercel rewrites. Python 3.12 is pinned via `.python-version`.
 
+Voice calls are triggered via the Bland AI API. The app sends a call request to Bland AI with a persona (the "Elderly Care Companion" agent), and Bland AI calls the patient. After the call completes, Bland AI sends the transcript back to our webhook endpoint.
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/hello` | GET | Hello greeting |
 | `/api/health` | GET | Health check |
+| `/api/calls/trigger` | POST | Trigger a Bland AI voice call |
+| `/api/calls/webhook` | POST | Receive post-call transcript from Bland AI |
 
 ## Project Structure
 
@@ -68,6 +72,16 @@ familiar/
   requirements.txt      # Python dependencies
   .python-version       # Python 3.12
 ```
+
+## Environment Variables
+
+Set these in Vercel via `vercel env add`:
+
+| Variable | Description |
+|----------|-------------|
+| `BLAND_API_KEY` | Bland AI API key |
+| `BLAND_AGENT_ID` | Default Bland AI persona ID (Elderly Care Companion) |
+| `BASE_URL` | Deployed app URL for webhook callbacks |
 
 ## Development
 
