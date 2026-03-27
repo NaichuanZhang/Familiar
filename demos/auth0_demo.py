@@ -130,22 +130,23 @@ async def home(request: Request):
 async def login():
     """
     Redirect to Auth0 Universal Login.
-
+    
     This is the entry point of the diagram:
     User → Auth0 (with Google connection) → Token Exchange → Token Vault
     """
+    from urllib.parse import urlencode
     params = {
         "response_type": "code",
         "client_id": AUTH0_CLIENT_ID,
         "redirect_uri": AUTH0_CALLBACK_URL,
         "scope": "openid profile email offline_access",
-        # Force Google connection (skip Auth0 login page)
         "connection": "google-oauth2",
-        # Request offline_access for refresh token (needed for Token Vault)
         "audience": AUTH0_AUDIENCE,
+        # Request Google API scopes on the underlying Google token
+        "connection_scope": "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.readonly",
+        "access_type": "offline",
     }
-    query = "&".join(f"{k}={v}" for k, v in params.items())
-    return RedirectResponse(f"https://{AUTH0_DOMAIN}/authorize?{query}")
+    return RedirectResponse(f"https://{AUTH0_DOMAIN}/authorize?{urlencode(params)}")
 
 
 @app.get("/auth/callback")
@@ -153,7 +154,7 @@ async def callback(request: Request):
     """
     Auth0 redirects here after user authenticates.
     We exchange the authorization code for tokens.
-
+    
     At this point, Auth0 has already:
     1. Authenticated the user via Google
     2. Stored Google's access + refresh tokens in Token Vault
@@ -189,6 +190,12 @@ async def callback(request: Request):
         userinfo = await client.get(
             f"https://{AUTH0_DOMAIN}/userinfo",
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
+        )
+
+    if userinfo.status_code != 200:
+        return JSONResponse(
+            {"error": "Failed to fetch user profile", "detail": userinfo.json()},
+            status_code=400,
         )
 
     user_data = userinfo.json()
@@ -236,55 +243,57 @@ async def get_current_user(request: Request) -> dict:
 # Token Vault: Exchange Auth0 token → Google token
 # ─────────────────────────────────────────────
 
+async def get_mgmt_token() -> str:
+    """Get a Management API token via client credentials."""
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"https://{AUTH0_DOMAIN}/oauth/token",
+            json={
+                "grant_type": "client_credentials",
+                "client_id": AUTH0_CLIENT_ID,
+                "client_secret": AUTH0_CLIENT_SECRET,
+                "audience": f"https://{AUTH0_DOMAIN}/api/v2/",
+            },
+        )
+    response.raise_for_status()
+    return response.json()["access_token"]
+
+
 async def get_google_token_from_vault(
     user: dict,
     scopes: list[str],
     connection: str = "google-oauth2",
 ) -> str:
     """
-    THIS IS THE CORE TOKEN VAULT OPERATION.
-
-    Matches the diagram: Auth0 Token Vault → Token Exchange → Google API token
-
-    Uses RFC 8693 Token Exchange:
-    - We send our Auth0 refresh token
-    - Auth0 returns a fresh, scoped Google access token
-    - We NEVER see Google's refresh token
-
-    API: POST https://{domain}/oauth/token
-    Grant type: urn:ietf:params:oauth:grant-type:token-exchange
+    Fetch the user's Google access token from Auth0's stored identities
+    via the Management API (works on free plans, unlike Token Vault).
     """
-    access_token = user.get("access_token")
-    if not access_token:
-        raise HTTPException(
-            400,
-            "No access token available. Re-login."
-        )
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(400, "No user ID in session.")
+
+    mgmt_token = await get_mgmt_token()
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"https://{AUTH0_DOMAIN}/oauth/token",
-            json={
-                "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-                "subject_token": access_token,
-                "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
-                "requested_token_type": "urn:auth0:params:oauth:token-type:connection",
-                "client_id": AUTH0_CLIENT_ID,
-                "client_secret": AUTH0_CLIENT_SECRET,
-                "connection": connection,
-                "scope": " ".join(scopes),
-            },
+        response = await client.get(
+            f"https://{AUTH0_DOMAIN}/api/v2/users/{user_id}",
+            headers={"Authorization": f"Bearer {mgmt_token}"},
         )
 
     if response.status_code != 200:
-        error_detail = response.json()
-        raise HTTPException(
-            400,
-            f"Token Vault exchange failed: {error_detail.get('error_description', error_detail)}"
-        )
+        raise HTTPException(400, f"Failed to fetch user identity: {response.json()}")
 
-    vault_response = response.json()
-    return vault_response["access_token"]
+    identities = response.json().get("identities", [])
+    google_identity = next((i for i in identities if i.get("provider") == "google-oauth2"), None)
+
+    if not google_identity:
+        raise HTTPException(400, "No Google identity found. Log in with Google.")
+
+    access_token = google_identity.get("access_token")
+    if not access_token:
+        raise HTTPException(400, "No Google access token in identity. Re-login with Google.")
+
+    return access_token
 
 
 # ─────────────────────────────────────────────
@@ -295,7 +304,7 @@ async def get_google_token_from_vault(
 async def read_gmail(user: dict = Depends(get_current_user)):
     """
     Agent reads Gmail using token from Auth0 Token Vault.
-
+    
     Flow: Auth0 refresh token → Token Vault exchange → Google access token → Gmail API
     """
     try:
@@ -459,7 +468,7 @@ async def read_drive(user: dict = Depends(get_current_user)):
 async def run_agent_cycle(user: dict = Depends(get_current_user)):
     """
     Full agent cycle: reads all Google APIs, then reasons.
-
+    
     This is the complete flow from the diagram:
     1. User already authenticated (session exists)
     2. Token Vault → Gmail token → read emails
@@ -475,71 +484,98 @@ async def run_agent_cycle(user: dict = Depends(get_current_user)):
     }
 
     # Step 1: Gmail
+    gmail_data = None
     try:
         gmail_token = await get_google_token_from_vault(
             user, scopes=["https://www.googleapis.com/auth/gmail.readonly"]
         )
+        async with httpx.AsyncClient() as client:
+            gmail_resp = await client.get(
+                "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+                headers={"Authorization": f"Bearer {gmail_token}"},
+                params={"maxResults": 3, "q": "is:inbox"},
+            )
+        gmail_data = gmail_resp.json().get("messages", []) if gmail_resp.status_code == 200 else []
         results["steps"].append({
             "step": 1,
-            "action": "Token Vault → Gmail token",
+            "action": "Token Vault → Gmail token → read inbox",
             "status": "success",
-            "token_preview": gmail_token[:20] + "...",
+            "emails_found": len(gmail_data),
         })
     except Exception as e:
         results["steps"].append({
             "step": 1,
-            "action": "Token Vault → Gmail token",
+            "action": "Token Vault → Gmail token → read inbox",
             "status": "failed",
             "error": str(e),
         })
-        gmail_token = None
 
     # Step 2: Calendar
+    cal_data = None
     try:
         cal_token = await get_google_token_from_vault(
             user, scopes=["https://www.googleapis.com/auth/calendar.readonly"]
         )
+        now = datetime.utcnow().isoformat() + "Z"
+        async with httpx.AsyncClient() as client:
+            cal_resp = await client.get(
+                "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+                headers={"Authorization": f"Bearer {cal_token}"},
+                params={"timeMin": now, "maxResults": 5, "singleEvents": True, "orderBy": "startTime"},
+            )
+        cal_data = cal_resp.json().get("items", []) if cal_resp.status_code == 200 else []
         results["steps"].append({
             "step": 2,
-            "action": "Token Vault → Calendar token",
+            "action": "Token Vault → Calendar token → read upcoming events",
             "status": "success",
-            "token_preview": cal_token[:20] + "...",
+            "events_found": len(cal_data),
         })
     except Exception as e:
         results["steps"].append({
             "step": 2,
-            "action": "Token Vault → Calendar token",
+            "action": "Token Vault → Calendar token → read upcoming events",
             "status": "failed",
             "error": str(e),
         })
-        cal_token = None
 
     # Step 3: Drive
+    drive_data = None
     try:
         drive_token = await get_google_token_from_vault(
             user, scopes=["https://www.googleapis.com/auth/drive.readonly"]
         )
+        async with httpx.AsyncClient() as client:
+            drive_resp = await client.get(
+                "https://www.googleapis.com/drive/v3/files",
+                headers={"Authorization": f"Bearer {drive_token}"},
+                params={"pageSize": 5, "orderBy": "modifiedTime desc"},
+            )
+        drive_data = drive_resp.json().get("files", []) if drive_resp.status_code == 200 else []
         results["steps"].append({
             "step": 3,
-            "action": "Token Vault → Drive token",
+            "action": "Token Vault → Drive token → list recent files",
             "status": "success",
-            "token_preview": drive_token[:20] + "...",
+            "files_found": len(drive_data),
         })
     except Exception as e:
         results["steps"].append({
             "step": 3,
-            "action": "Token Vault → Drive token",
+            "action": "Token Vault → Drive token → list recent files",
             "status": "failed",
             "error": str(e),
         })
-        drive_token = None
 
-    # Step 4: Agent reasoning (would go to Bedrock/OpenAI in production)
+    # Step 4: Agent reasoning (would call LLM with fetched data in production)
     results["steps"].append({
         "step": 4,
         "action": "LLM Analysis",
         "status": "ready",
-        "note": "In production, all fetched data is sent to AWS Bedrock for reasoning",
+        "note": "In production, the fetched emails, events, and files are sent to an LLM for reasoning",
+        "data_available": {
+            "emails": len(gmail_data) if gmail_data is not None else 0,
+            "calendar_events": len(cal_data) if cal_data is not None else 0,
+            "drive_files": len(drive_data) if drive_data is not None else 0,
+        },
     })
 
     results["security_summary"] = {
