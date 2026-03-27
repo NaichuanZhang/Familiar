@@ -27,6 +27,24 @@ Familiar turns ad-hoc check-ins into a reliable care rhythm. Family members coll
 - **Family circle** — a shared space for notes, updates, and coordination among caregivers
 - **Patient profile** — a living view of the loved one's health, medications, and upcoming needs
 
+## Tech Stack
+
+### Frontend
+- **Next.js** — React framework for the dashboard UI
+- Deployed on **Vercel**
+
+### Backend
+- **FastAPI** (Python) — API server
+- **uv** — Python package and project manager
+
+### Services & APIs
+- **Auth0** — Authentication and user management
+- **Ghost** (ghost.build) — Managed PostgreSQL database
+- **Bland AI** — Voice agent platform; the app triggers Bland AI to make the actual calls to patients
+- **Macrospace** — Automated code review
+
+_This list will grow as the project evolves._
+
 ## Status
 
-Early stage — exploring the product concept with design mocks.
+Early stage — tech stack selected, design mocks complete, beginning implementation.
