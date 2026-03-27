@@ -36,7 +36,7 @@ export function EditCallModal({
   );
   const [title, setTitle] = useState(schedule.title);
   const [cadence, setCadence] = useState(schedule.cadence);
-  const [time, setTime] = useState(schedule.scheduledTime);
+  const [time, setTime] = useState(schedule.scheduledTime.slice(0, 5));
   const [assignedUserId, setAssignedUserId] = useState(
     schedule.assignedUserId ?? users[0]?.id ?? "",
   );
